@@ -169,38 +169,38 @@ struct ContentView: View {
                  // Apply padding *here* to position the button within the overlay area
                  .padding(.trailing, 20)
                  .padding(.bottom, 75) // Keep increased bottom padding
-            }
-            .navigationTitle("Blood Pressure Tracker") // Keep full title
-             // Toolbar is now empty as FAB handles add action
-            .toolbar { }
-             // Use .task for initial data load (might need adjustment based on tab appearance)
-            .task {
-                 // Fetch data once when the main view appears
+             }
+             // Add the .task modifier back to fetch initial data
+             .task {
+                 // Fetch data once when the main TabView appears
                 if viewModel.readings.isEmpty && viewModel.stats == nil {
                    await viewModel.fetchAllData()
                 }
-            }
-            // Sheet for adding new readings
-            .sheet(isPresented: $showingAddSheet) {
-                // Pass the ViewModel to the sheet if AddReadingView needs it directly
-                // Or handle submission via closure as before
-                AddReadingView() { newInput in
-                    Task {
-                         do {
-                             try await viewModel.submitReading(input: newInput)
-                             showingAddSheet = false
-                         } catch {
-                            print("Submission failed, sheet stays open.")
-                         }
-                    }
-                }
-                 // Make ViewModel available to all tabs and the sheet
-                 .environmentObject(viewModel)
-            }
+             }
+             // Sheet for adding new readings
+             .sheet(isPresented: $showingAddSheet) {
+                 // Pass the ViewModel to the sheet if AddReadingView needs it directly
+                 // Or handle submission via closure as before
+                 AddReadingView() { newInput in
+                     Task {
+                          do {
+                              try await viewModel.submitReading(input: newInput)
+                              showingAddSheet = false
+                          } catch {
+                             print("Submission failed, sheet stays open.")
+                          }
+                     }
+                 }
+                  // Make ViewModel available to all tabs and the sheet
+                  .environmentObject(viewModel)
+             }
         }
         // Apply EnvironmentObject to the NavigationView content
         .environmentObject(viewModel)
         .navigationViewStyle(.stack)
+        // Toolbar is now empty as FAB handles add action
+        .toolbar { }
+        // Use .task for initial data load (might need adjustment based on tab appearance)
     }
 }
 

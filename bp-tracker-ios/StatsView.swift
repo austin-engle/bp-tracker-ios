@@ -22,58 +22,67 @@ struct StatsView: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Text("Summary")
-                .font(.title2)
-                .fontWeight(.bold)
-                .padding(.bottom, 5)
-
-            // Display Last Reading
-             if let last = stats?.lastReading {
-                  HStack {
-                     VStack(alignment: .leading) {
-                         Text("Last Reading")
-                             .font(.caption)
-                             .foregroundColor(.secondary)
-                         HStack(alignment: .firstTextBaseline) {
-                              Text("\(last.systolic)/\(last.diastolic)")
-                                 .font(.title).fontWeight(.semibold) // Larger font for BP
-                              Text("Pulse: \(last.pulse)") // Shortened Pulse label
-                                 .font(.subheadline)
-                                 .foregroundColor(.gray)
-                                 .padding(.leading, 5)
-                         }
-                         Text(last.timestamp, formatter: Self.dateFormatter)
-                              .font(.caption)
-                              .foregroundColor(.gray)
-                     }
-                     Spacer()
-                     // Classification Badge (softened color, maybe icon)
-                      Text(last.classification)
-                           .font(.caption).bold()
-                           .padding(.horizontal, 6).padding(.vertical, 3)
-                           .background(classificationColor(last.classification).opacity(0.8)) // Soften color slightly
-                           .foregroundColor(.white)
-                           .clipShape(Capsule())
-                  }
-             } else if stats != nil { // Only show if stats loaded but no last reading
-                 Text("Last Reading: N/A")
-                     .font(.subheadline)
-                     .foregroundColor(.secondary)
-             }
-
-            Divider().padding(.vertical, 4)
-
-            // Display Averages in a Grid
-            // Averages Section with Tabs
+        VStack(alignment: .leading, spacing: 15) { // Increase overall spacing
+            // --- Last Reading Section ---
             VStack(alignment: .leading) {
+                 Text("Last Reading")
+                    .font(.headline) // Make it a clear section title
+                    .foregroundColor(.secondary)
+
+                if let last = stats?.lastReading {
+                     HStack {
+                         VStack(alignment: .leading) {
+                             HStack(alignment: .firstTextBaseline) {
+                                  Text("\(last.systolic)/\(last.diastolic)")
+                                     .font(.title).fontWeight(.semibold) // Larger font for BP
+                                  Text("Pulse: \(last.pulse)") // Shortened Pulse label
+                                     .font(.subheadline)
+                                     .foregroundColor(.gray)
+                                     .padding(.leading, 5)
+                             }
+                             Text(last.timestamp, formatter: Self.dateFormatter)
+                                  .font(.caption)
+                                  .foregroundColor(.gray)
+                         }
+                         Spacer()
+                         // Classification Badge (softened color, maybe icon)
+                          Text(last.classification)
+                               .font(.caption).bold()
+                               .padding(.horizontal, 6).padding(.vertical, 3)
+                               .background(classificationColor(last.classification).opacity(0.8)) // Soften color slightly
+                               .foregroundColor(.white)
+                               .clipShape(Capsule())
+                     }
+                } else if stats != nil { // Only show if stats loaded but no last reading
+                    Text("No readings yet.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 5)
+                } else {
+                     // Placeholder while loading
+                     Text("Loading...")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 5)
+                }
+            }
+
+            Divider()
+
+            // --- Averages Section ---
+            VStack(alignment: .leading) {
+                Text("Averages") // Clear section title
+                     .font(.headline)
+                     .foregroundColor(.secondary)
+                     .padding(.bottom, 5)
+
                 Picker("Average Period", selection: $selectedAveragePeriod) {
                     ForEach(AveragePeriod.allCases) { period in
                         Text(period.rawValue).tag(period)
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding(.bottom, 5)
+                .padding(.bottom, 10)
 
                 // Display content based on selected tab
                 selectedAverageView()
@@ -130,7 +139,10 @@ struct StatsView: View {
                  Text("--/--")
                     .font(.title2).fontWeight(.medium)
                      .foregroundColor(.secondary)
-                 ProgressView() // Show loading indicator within the tab content area
+                // More subtle loading indicator within the average display
+                ProgressView()
+                    .controlSize(.small)
+                    .padding(.top, 2)
             }
         }
         .padding(.top, 5)

@@ -4,49 +4,32 @@ struct HistoryTabView: View {
     @EnvironmentObject var viewModel: ReadingViewModel // Access the shared ViewModel
 
     var body: some View {
-        VStack(spacing: 0) { // Use VStack to contain header and list
-            // MARK: - Readings List Header (Moved here from ContentView)
-             HStack {
-                 Text("History")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                 Spacer()
-                 // Optional: Add filtering/sorting controls here later
-             }
-             .padding(.horizontal)
-             .padding(.top)
-             .padding(.bottom, 5)
-             .background(Color(UIColor.systemGroupedBackground)) // Subtle background
-
-            Divider()
-
-            // MARK: - Readings List
-            List {
-                if viewModel.isLoadingReadings && viewModel.readings.isEmpty {
-                    ProgressView("Loading readings...")
-                } else if let errorMessage = viewModel.errorMessage, viewModel.readings.isEmpty {
-                    Text("Error: \(errorMessage)")
-                        .foregroundColor(.red)
-                        .padding()
-                } else if viewModel.readings.isEmpty {
-                    Text("No readings recorded yet.")
-                        .foregroundColor(.secondary)
-                        .padding()
-                } else {
-                    // Note: Grouping by date would require additional logic here
-                    ForEach(viewModel.readings) { reading in
-                        ReadingRow(reading: reading)
-                            .listRowInsets(EdgeInsets()) // Remove default padding
-                            .padding(.vertical, 4)
-                            .padding(.horizontal)
-                    }
+        // MARK: - Readings List
+        List {
+            if viewModel.isLoadingReadings && viewModel.readings.isEmpty {
+                ProgressView("Loading readings...")
+            } else if let errorMessage = viewModel.errorMessage, viewModel.readings.isEmpty {
+                Text("Error: \(errorMessage)")
+                    .foregroundColor(.red)
+                    .padding()
+            } else if viewModel.readings.isEmpty {
+                Text("No readings recorded yet.")
+                    .foregroundColor(.secondary)
+                    .padding()
+            } else {
+                // Note: Grouping by date would require additional logic here
+                ForEach(viewModel.readings) { reading in
+                    ReadingRow(reading: reading)
+                        .listRowInsets(EdgeInsets()) // Remove default padding
+                        .padding(.vertical, 4)
+                        .padding(.horizontal)
                 }
             }
-            .listStyle(.plain)
-            .refreshable {
-                // Refresh both readings and stats when pulling history
-                await viewModel.fetchAllData()
-            }
+        }
+        .listStyle(.plain)
+        .refreshable {
+            // Refresh both readings and stats when pulling history
+            await viewModel.fetchAllData()
         }
     }
 }

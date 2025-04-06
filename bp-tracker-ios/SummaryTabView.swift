@@ -4,39 +4,59 @@ struct SummaryTabView: View {
     @EnvironmentObject var viewModel: ReadingViewModel // Access the shared ViewModel
 
     var body: some View {
-        // Use a ScrollView in case content grows
+        // Use a ScrollView or just a VStack depending on content complexity
+        // ScrollView might be better for future additions
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Display the StatsView, passing the stats from the ViewModel
-                StatsView(stats: viewModel.stats)
 
-                // Show loading indicator for stats specifically
-                if viewModel.isLoadingStats {
-                    HStack {
-                        Spacer()
-                        ProgressView("Loading Summary...")
-                        Spacer()
+                // Conditional Content based on Loading/Error State
+                if viewModel.isLoadingStats && viewModel.stats == nil { // Initial loading state
+                    // Show centered progress view for initial load
+                    ProgressView("Loading Summary...")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 50) // Add padding to center it vertically somewhat
+                } else if let errorMessage = viewModel.errorMessage { // Error state
+                    // Display error prominently
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                        Text("Error Loading Summary")
+                            .font(.headline)
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Retry") {
+                            Task { await viewModel.fetchStatsOnly() } // Or fetchAllData()
+                        }
+                        .padding(.top)
                     }
-                }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .center)
 
-                // Display error message if relevant to this tab
-                // Consider filtering errors or having specific error properties
-                if let errorMessage = viewModel.errorMessage, !viewModel.isLoadingStats {
-                    Text("Error: \(errorMessage)")
-                        .foregroundColor(.red)
-                        .padding()
+                } else { // Loaded state (or loading update)
+                    // Display the StatsView normally
+                    StatsView(stats: viewModel.stats)
+                        // Optionally show subtle progress if just updating
+                        if viewModel.isLoadingStats {
+                            ProgressView()
+                                .controlSize(.small)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.top, 5)
+                        }
                 }
 
                 // Add other summary elements here later if needed
                 // e.g., Insights, Charts, etc.
 
-                Spacer() // Pushes content to the top
+                // Removed Spacer to allow content to determine height
+                // Spacer()
             }
-            .padding(.top) // Add some padding at the top of the scroll view
+            .padding(.top) // Add some padding at the top of the scroll view content
         }
-        // Potentially add a refreshable modifier here too if needed
-        // .refreshable { await viewModel.fetchStatsOnly() }
-        // Consider if pull-to-refresh makes sense on the summary page
+        // Apply refreshable here if desired
+         .refreshable { await viewModel.fetchStatsOnly() }
     }
 }
 
