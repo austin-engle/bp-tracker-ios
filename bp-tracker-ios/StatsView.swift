@@ -123,10 +123,11 @@ struct StatsView: View {
                     .font(.subheadline).foregroundColor(.gray)
                  Text("(\(statCount) readings)")
                      .font(.caption).foregroundColor(.gray)
+                 // Classification Text and its Modifiers
                  Text(avg.classification)
                      .font(.caption).bold()
                      .padding(.horizontal, 6).padding(.vertical, 3)
-                     .background(classificationColor(avg.classification).opacity(0.8))
+                     .background(classificationColor(avg.classification).opacity(0.8)) // Background applied here
                      .foregroundColor(.white)
                      .clipShape(Capsule())
                      .padding(.top, 2)
@@ -135,18 +136,14 @@ struct StatsView: View {
                 Text("N/A")
                     .font(.title2).fontWeight(.medium)
                      .foregroundColor(.secondary)
-                 Text("(\(statCount) readings)")
-                     .font(.caption).foregroundColor(.gray)
+                 // Temporarily removed reading count text
             } else {
-                // Placeholder while stats are loading
+                 // Placeholder while stats are loading
                  Text("--/--")
                     .font(.title2).fontWeight(.medium)
                      .foregroundColor(.secondary)
-                // More subtle loading indicator within the average display
-                ProgressView()
-                    .controlSize(.small)
-                    .padding(.top, 2)
-            }
+                 // Temporarily removed reading count text
+              }
         }
         .padding(.top, 5)
     }

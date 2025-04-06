@@ -61,12 +61,12 @@ struct SummaryTabView: View {
                     BPChartView(readings: filteredReadings) // Pass filtered readings from ViewModel
 
                     // Optionally show subtle progress if just updating
-                    if viewModel.isLoadingReadings || viewModel.isLoadingStats { // Show if either is loading
-                        ProgressView()
-                            .controlSize(.small)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 5)
-                    }
+                    // if viewModel.isLoadingReadings || viewModel.isLoadingStats { // Temporarily disabled refresh indicator
+                    //     ProgressView()
+                    //         .controlSize(.small)
+                    //         .frame(maxWidth: .infinity, alignment: .center)
+                    //         .padding(.top, 5)
+                    // }
                 }
 
                 // Add other summary elements here later if needed
