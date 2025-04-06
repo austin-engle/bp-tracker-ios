@@ -77,20 +77,14 @@ class ReadingViewModel: ObservableObject {
      func fetchStatsOnly() async {
          errorMessage = nil // Clear error before trying
          do {
+             // Assign directly - this seemed okay before
              stats = try await networkService.fetchStats()
          } catch {
-             // --- TEMPORARILY DISABLE ERROR MESSAGE UPDATE ---
-             // Just log the error for now, don't update published state
+             // --- Revert to state that avoided -999 error ---
+             // Comment out the errorMessage update, just print.
              print("Error during fetchStatsOnly: \(error.localizedDescription)")
-             /* // Original error handling commented out:
-              if let networkError = error as? NetworkService.NetworkError {
-                  errorMessage = "Failed to refresh stats: \(networkError)"
-              } else {
-                  errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
-              }
-              print(errorMessage ?? "Unknown error")
-             */
-             // --- END TEMPORARY DISABLE ---
+             // errorMessage = "..." // Keep commented out for now
+             // --- End Revert ---
          }
      }
 
