@@ -75,20 +75,24 @@ class ReadingViewModel: ObservableObject {
     }
 
      func fetchStatsOnly() async {
-        isLoadingStats = true
-        errorMessage = nil
-        do {
-            stats = try await networkService.fetchStats()
-        } catch {
-             if let networkError = error as? NetworkService.NetworkError {
-                 errorMessage = "Failed to refresh stats: \(networkError)"
-             } else {
-                 errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
-             }
-            print(errorMessage ?? "Unknown error")
-        }
-        isLoadingStats = false
-    }
+         errorMessage = nil // Clear error before trying
+         do {
+             stats = try await networkService.fetchStats()
+         } catch {
+             // --- TEMPORARILY DISABLE ERROR MESSAGE UPDATE ---
+             // Just log the error for now, don't update published state
+             print("Error during fetchStatsOnly: \(error.localizedDescription)")
+             /* // Original error handling commented out:
+              if let networkError = error as? NetworkService.NetworkError {
+                  errorMessage = "Failed to refresh stats: \(networkError)"
+              } else {
+                  errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+              }
+              print(errorMessage ?? "Unknown error")
+             */
+             // --- END TEMPORARY DISABLE ---
+         }
+     }
 
     // Submit function now takes input from the AddReadingView
     func submitReading(input: ReadingInput) async throws { // Make it throw so sheet can handle error/dismiss
