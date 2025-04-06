@@ -1,81 +1,6 @@
 import SwiftUI
 
-// Reusable card view for entering one reading's data
-struct ReadingInputCard: View {
-    let readingNumber: Int
-    @Binding var systolic: String
-    @Binding var diastolic: String
-    @Binding var pulse: String
-
-    // Focus state bindings passed from parent
-    @FocusState.Binding var focusedField: AddReadingView.Field?
-    let systolicField: AddReadingView.Field
-    let diastolicField: AddReadingView.Field
-    let pulseField: AddReadingView.Field
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) { // Explicit spacing inside card
-            // Card Header
-            HStack {
-                Text("🩺") // Stethoscope Icon
-                    .font(.title2)
-                Text("Reading \(readingNumber)")
-                    .font(.headline)
-                Spacer() // Push header content left
-            }
-            // .padding(.bottom, 5) // Use VStack spacing instead
-
-            // Input Fields
-            HStack(spacing: 12) { // Consistent spacing for input fields
-                inputField(label: "Systolic", placeholder: "e.g. 120", text: $systolic, field: systolicField)
-                inputField(label: "Diastolic", placeholder: "e.g. 80", text: $diastolic, field: diastolicField)
-                inputField(label: "Pulse", placeholder: "e.g. 72", text: $pulse, field: pulseField)
-            }
-        }
-        .padding(12) // Explicit internal padding
-        .background(Color(UIColor.systemGray6)) // Light gray background
-        .cornerRadius(16) // Slightly larger radius
-        // Add subtle shadow to the card itself
-        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-        .padding(.horizontal) // Padding for the card itself
-        .padding(.bottom, 16) // Space below card (margin)
-    }
-
-    // Helper for styled input fields
-    @ViewBuilder
-    private func inputField(label: String, placeholder: String, text: Binding<String>, field: AddReadingView.Field) -> some View {
-        // Determine if this field is focused
-        let isFocused = focusedField == field
-
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            TextField(placeholder, text: text)
-                .keyboardType(.numberPad)
-                .padding(10) // Adjust padding
-                .background(
-                     // Use a ZStack for layering background, border, and shadow
-                     ZStack {
-                         RoundedRectangle(cornerRadius: 8)
-                             .fill(Color(UIColor.systemBackground))
-                         RoundedRectangle(cornerRadius: 8)
-                              // Subtle inner shadow for depth when not focused
-                             .strokeBorder(Color.gray.opacity(0.2), lineWidth: 1)
-                     }
-                 )
-                 // Add a subtle elevation shadow to the text field itself
-                 .shadow(color: .black.opacity(isFocused ? 0.15 : 0.05), radius: isFocused ? 3 : 1, x: 0, y: isFocused ? 2 : 1)
-                 .overlay(
-                     // Highlight border when focused
-                     RoundedRectangle(cornerRadius: 8)
-                         .stroke(isFocused ? Color.blue : Color.clear, lineWidth: 2) // Blue border on focus
-                 )
-                .focused($focusedField, equals: field)
-                .animation(.easeInOut(duration: 0.2), value: isFocused) // Animate focus changes
-        }
-    }
-}
+// Removed ReadingInputCard as layout is integrated now
 
 struct AddReadingView: View {
     // State for input fields (9 total)
@@ -92,48 +17,55 @@ struct AddReadingView: View {
     @State private var validationError: String? = nil
     @State private var isSaving = false
 
-    // Environment variable to dismiss the sheet
     @Environment(\.dismiss) var dismiss
-
-    // Closure to call when save is successful
     var onSave: (ReadingInput) -> Void
-
-    // Focus state management (iOS 15+)
     @FocusState private var focusedField: Field?
-    enum Field: Hashable {
+
+    // Define order for focus navigation
+    enum Field: Int, CaseIterable, Hashable {
         case s1, d1, p1, s2, d2, p2, s3, d3, p3
     }
 
     var body: some View {
         NavigationView {
-            ScrollView { // Use ScrollView instead of Form
-                 VStack(spacing: 0) { // Keep spacing 0, handled by card padding
-                     // Validation Error Display (moved to top)
+            ScrollView {
+                 VStack(alignment: .leading, spacing: 15) { // Added spacing for elements
+                     // 1. Contextual Text
+                     Text("Enter three readings taken a few minutes apart for an accurate average.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                        .padding(.bottom, 5) // Space below context text
+
+                     // Validation Error Display (if needed)
                       if let error = validationError {
                           Text(error)
                               .foregroundColor(.red)
                               .font(.caption)
                               .padding(.horizontal)
-                              .padding(.bottom, 5)
                       }
 
-                    // Reading Input Cards
-                    ReadingInputCard(readingNumber: 1,
-                                     systolic: $systolic1, diastolic: $diastolic1, pulse: $pulse1,
-                                     focusedField: $focusedField,
-                                     systolicField: .s1, diastolicField: .d1, pulseField: .p1)
+                    // 2. Single Card Layout
+                     VStack(alignment: .leading, spacing: 12) {
+                         readingSection(number: 1,
+                                        systolic: $systolic1, diastolic: $diastolic1, pulse: $pulse1,
+                                        sField: .s1, dField: .d1, pField: .p1)
+                         Divider()
+                         readingSection(number: 2,
+                                        systolic: $systolic2, diastolic: $diastolic2, pulse: $pulse2,
+                                        sField: .s2, dField: .d2, pField: .p2)
+                         Divider()
+                         readingSection(number: 3,
+                                        systolic: $systolic3, diastolic: $diastolic3, pulse: $pulse3,
+                                        sField: .s3, dField: .d3, pField: .p3)
+                     }
+                     .padding() // Internal padding for the card content
+                     .background(Color(UIColor.secondarySystemBackground)) // Card background
+                     .cornerRadius(16)
+                     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                     .padding(.horizontal) // Padding around the card
 
-                    ReadingInputCard(readingNumber: 2,
-                                     systolic: $systolic2, diastolic: $diastolic2, pulse: $pulse2,
-                                     focusedField: $focusedField,
-                                     systolicField: .s2, diastolicField: .d2, pulseField: .p2)
-
-                    ReadingInputCard(readingNumber: 3,
-                                     systolic: $systolic3, diastolic: $diastolic3, pulse: $pulse3,
-                                     focusedField: $focusedField,
-                                     systolicField: .s3, diastolicField: .d3, pulseField: .p3)
-
-                     Spacer() // Pushes content up if scroll view has extra space
+                     Spacer() // Pushes card up if content is short
                 }
                  .padding(.top) // Add padding at the top of the scroll content
             }
@@ -142,45 +74,111 @@ struct AddReadingView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isSaving {
                         ProgressView()
                     } else {
-                        Button("Save") {
-                            saveReading()
-                        }
-                        .disabled(!isFormValid() || isSaving)
+                        Button("Save") { saveReading() }
+                            .disabled(!isFormValid() || isSaving)
                     }
                 }
 
-                // Focus navigation toolbar
+                // 3. Keyboard Toolbar Navigation
                  ToolbarItemGroup(placement: .keyboard) {
-                     // Add Next/Previous buttons for focus navigation?
-                     // Example:
-                     // Button("Prev") { focusPreviousField() }.disabled(!canFocusPrevious())
-                     // Button("Next") { focusNextField() }.disabled(!canFocusNext())
+                     Button("Prev", action: focusPreviousField)
+                         .disabled(!canFocusPrevious())
+
+                     Button("Next", action: focusNextField)
+                          .disabled(!canFocusNext())
+
                      Spacer()
-                     Button("Done") {
-                         focusedField = nil // Dismiss keyboard
-                     }
+                     Button("Done") { focusedField = nil }
                  }
             }
         }
     }
 
+    // Helper ViewBuilder for a single reading input section within the card
+    @ViewBuilder
+    private func readingSection(number: Int, systolic: Binding<String>, diastolic: Binding<String>, pulse: Binding<String>, sField: Field, dField: Field, pField: Field) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Reading \(number)")
+                .font(.headline)
+
+            HStack(spacing: 12) {
+                inputField(label: "Systolic", placeholder: "e.g. 120", text: systolic, field: sField)
+                inputField(label: "Diastolic", placeholder: "e.g. 80", text: diastolic, field: dField)
+                inputField(label: "Pulse", placeholder: "e.g. 72", text: pulse, field: pField)
+            }
+        }
+    }
+
+    // Helper for styled input fields (remains mostly the same)
+    @ViewBuilder
+    private func inputField(label: String, placeholder: String, text: Binding<String>, field: Field) -> some View {
+        let isFocused = focusedField == field
+        VStack(alignment: .leading, spacing: 3) {
+             Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            TextField(placeholder, text: text)
+                .keyboardType(.numberPad)
+                .padding(10)
+                .background(
+                     ZStack {
+                         RoundedRectangle(cornerRadius: 8).fill(Color(UIColor.systemBackground))
+                         RoundedRectangle(cornerRadius: 8).strokeBorder(Color.gray.opacity(0.2), lineWidth: 1)
+                     }
+                 )
+                 .shadow(color: .black.opacity(isFocused ? 0.15 : 0.05), radius: isFocused ? 3 : 1, x: 0, y: isFocused ? 2 : 1)
+                 .overlay(
+                     RoundedRectangle(cornerRadius: 8).stroke(isFocused ? Color.blue : Color.clear, lineWidth: 2)
+                 )
+                .focused($focusedField, equals: field)
+                .animation(.easeInOut(duration: 0.2), value: isFocused)
+        }
+    }
+
+    // --- Focus Navigation Logic ---
+    private func focusPreviousField() {
+        guard let currentFocus = focusedField, let currentIndex = Field.allCases.firstIndex(of: currentFocus) else { return }
+        let previousIndex = currentIndex - 1
+        if previousIndex >= 0 {
+            focusedField = Field.allCases[previousIndex]
+        }
+    }
+
+    private func focusNextField() {
+        guard let currentFocus = focusedField, let currentIndex = Field.allCases.firstIndex(of: currentFocus) else { return }
+        let nextIndex = currentIndex + 1
+        if nextIndex < Field.allCases.count {
+            focusedField = Field.allCases[nextIndex]
+        } else {
+            focusedField = nil // Dismiss keyboard after last field
+        }
+    }
+
+    private func canFocusPrevious() -> Bool {
+        guard let currentFocus = focusedField, let currentIndex = Field.allCases.firstIndex(of: currentFocus) else { return false }
+        return currentIndex > 0
+    }
+
+     private func canFocusNext() -> Bool {
+        guard let currentFocus = focusedField, let currentIndex = Field.allCases.firstIndex(of: currentFocus) else { return false }
+        // Allow Next until the very last field
+        return currentIndex < Field.allCases.count - 1
+    }
+
+    // --- Validation and Saving Logic (Unchanged) ---
     private func isFormValid() -> Bool {
-        // Keep validation: Check all 9 fields for valid integer input
         return Int(systolic1) != nil && Int(diastolic1) != nil && Int(pulse1) != nil &&
                Int(systolic2) != nil && Int(diastolic2) != nil && Int(pulse2) != nil &&
                Int(systolic3) != nil && Int(diastolic3) != nil && Int(pulse3) != nil
     }
 
     private func saveReading() {
-         // Validate and convert (already checked by isFormValid enable state, but double-check)
          guard let s1 = Int(systolic1), let d1 = Int(diastolic1), let p1 = Int(pulse1),
                let s2 = Int(systolic2), let d2 = Int(diastolic2), let p2 = Int(pulse2),
                let s3 = Int(systolic3), let d3 = Int(diastolic3), let p3 = Int(pulse3) else {
@@ -197,14 +195,11 @@ struct AddReadingView: View {
 
          onSave(input)
 
-         // Sheet dismissal handled by ContentView
          Task { @MainActor in
               try? await Task.sleep(nanoseconds: 500_000_000)
               isSaving = false
          }
     }
-
-    // Optional: Add focusPreviousField() / focusNextField() / canFocus...() methods here
 }
 
 // Preview Provider (Optional)
