@@ -80,7 +80,7 @@ struct StatsView: View {
                     .frame(maxWidth: .infinity, alignment: .center) // Center content
             }
         }
-        // Apply the reusable card style modifier
+         // Apply the reusable card style modifier
         .cardStyle() // Uses default values from the modifier
         .padding(.horizontal)
     }

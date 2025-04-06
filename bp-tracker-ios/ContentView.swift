@@ -117,74 +117,40 @@ class ReadingViewModel: ObservableObject {
     // private func clearInputFields() { ... }
 }
 
+// MARK: - Classification Color Helper (Global Scope for now)
+func classificationColor(_ classification: String) -> Color {
+    switch classification.lowercased() {
+    case "normal": return .green
+    case "elevated": return .yellow.opacity(0.9)
+    case "hypertension stage 1": return .orange.opacity(0.9)
+    case "hypertension stage 2": return .red.opacity(0.85)
+    case "hypertensive crisis": return .purple
+    default: return .gray
+    }
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = ReadingViewModel()
     @State private var showingAddSheet = false
 
     var body: some View {
         NavigationView {
-            // Use ZStack for layering FAB over the content
-            ZStack(alignment: .bottomTrailing) {
-                // Main content ScrollView or List
-                VStack(spacing: 0) { // Remove default VStack spacing
-                    // MARK: - Stats View
-                    StatsView(stats: viewModel.stats)
-                        .padding(.bottom) // Add some space below stats
-
-                     // MARK: - Loading/Error for Stats
-                     // Consider placing inside StatsView or handling more gracefully
-                     if viewModel.isLoadingStats {
-                         ProgressView("Loading Stats...").padding()
-                     }
-
-                    // MARK: - Readings List Header
-                     HStack {
-                         Text("History")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                         Spacer()
-                         // Optional: Add filtering/sorting controls here later
-                     }
-                     .padding(.horizontal)
-                     .padding(.top)
-                     .padding(.bottom, 5)
-                     .background(Color(UIColor.systemGroupedBackground)) // Subtle background
-
-                    Divider()
-
-                    // MARK: - Readings List
-                    List {
-                        if viewModel.isLoadingReadings && viewModel.readings.isEmpty {
-                            ProgressView("Loading readings...")
-                        } else if let errorMessage = viewModel.errorMessage, viewModel.readings.isEmpty {
-                             // Show general error if list is empty, could refine error display
-                            Text("Error: \(errorMessage)")
-                                .foregroundColor(.red)
-                                .padding()
-                        } else if viewModel.readings.isEmpty {
-                            Text("No readings recorded yet.")
-                                .foregroundColor(.secondary)
-                                .padding()
-                        } else {
-                            ForEach(viewModel.readings) { reading in
-                                ReadingRow(reading: reading)
-                                    // Apply list row styling if needed
-                                    .listRowInsets(EdgeInsets()) // Remove default padding if using cards in ReadingRow
-                                    .padding(.vertical, 4)
-                                    .padding(.horizontal)
-                            }
-                        }
+            // TabView is now the main content
+            TabView {
+                // Summary Tab (References new SummaryTabView)
+                SummaryTabView()
+                    .tabItem {
+                        Label("Summary", systemImage: "heart.text.square.fill")
                     }
-                    .listStyle(.plain) // Use plain style for less visual clutter
-                    .refreshable { // Add pull-to-refresh
-                        await viewModel.fetchAllData()
+
+                // History Tab (References new HistoryTabView)
+                HistoryTabView()
+                    .tabItem {
+                        Label("History", systemImage: "list.bullet")
                     }
-                    // Add bottom padding to prevent FAB overlap
-                    .padding(.bottom, 60)
-
-                } // End Main VStack
-
-                // MARK: - Floating Action Button (FAB)
+            }
+            // Attach the FAB as an overlay to the TabView
+            .overlay(alignment: .bottomTrailing) {
                  Button {
                      showingAddSheet = true
                  } label: {
@@ -192,108 +158,57 @@ struct ContentView: View {
                          Image(systemName: "plus")
                          Text("Add Reading")
                      }
-                     .padding()
+                     .padding(.horizontal, 16)
+                     .padding(.vertical, 10)
                      .foregroundColor(.white)
-                     .background(Color.blue) // Or your app's accent color
+                     .background(Color.blue)
                      .clipShape(Capsule())
-                     .shadow(radius: 5)
-                     .padding() // Padding from the edge of the screen
+                     // Apply shadow directly to the button visual
+                     .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
                  }
-
-            } // End ZStack
-            .navigationTitle("Blood Pressure Tracker") // Change title back to full name
-            .toolbar {
-                 // Remove the old toolbar item
-                 /*
-                 ToolbarItem(placement: .navigationBarTrailing) {
-                      Button {
-                          showingAddSheet = true
-                      } label: {
-                          Image(systemName: "plus.circle.fill")
-                              .font(.title2) // Make icon slightly larger
-                      }
-                 }
-                 */
+                 // Apply padding *here* to position the button within the overlay area
+                 .padding(.trailing, 20)
+                 .padding(.bottom, 75) // Keep increased bottom padding
             }
-            // Use .task for initial data load
+            .navigationTitle("Blood Pressure Tracker") // Keep full title
+             // Toolbar is now empty as FAB handles add action
+            .toolbar { }
+             // Use .task for initial data load (might need adjustment based on tab appearance)
             .task {
+                 // Fetch data once when the main view appears
                 if viewModel.readings.isEmpty && viewModel.stats == nil {
                    await viewModel.fetchAllData()
                 }
             }
             // Sheet for adding new readings
             .sheet(isPresented: $showingAddSheet) {
+                // Pass the ViewModel to the sheet if AddReadingView needs it directly
+                // Or handle submission via closure as before
                 AddReadingView() { newInput in
-                    // This closure is called by AddReadingView on successful save
                     Task {
                          do {
                              try await viewModel.submitReading(input: newInput)
-                             // If submitReading is successful, dismiss the sheet
                              showingAddSheet = false
                          } catch {
-                            // Error is handled and published by ViewModel
-                            // Sheet remains open for user to see/correct
                             print("Submission failed, sheet stays open.")
                          }
                     }
                 }
-                 // Inject environment object if ViewModel needed deeper
-                 // .environmentObject(viewModel)
+                 // Make ViewModel available to all tabs and the sheet
+                 .environmentObject(viewModel)
             }
         }
-        .navigationViewStyle(.stack) // Use stack style for standard behavior
+        // Apply EnvironmentObject to the NavigationView content
+        .environmentObject(viewModel)
+        .navigationViewStyle(.stack)
     }
 }
 
-// Simple row view for displaying a single reading
-struct ReadingRow: View {
-    let reading: Reading
-
-    private static var dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text("\(reading.systolic) / \(reading.diastolic)")
-                    .font(.headline)
-                 Text(reading.timestamp, formatter: Self.dateFormatter)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary) // Use secondary color for timestamp
-                Text("Pulse: \(reading.pulse) bpm")
-                    .font(.callout) // Slightly smaller font for pulse
-                    .foregroundColor(.gray)
-            }
-            Spacer()
-            // Classification Badge
-             Text(reading.classification)
-                .font(.caption).bold()
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(classificationColor(reading.classification)) // Use updated helper
-                .foregroundColor(.white)
-                .clipShape(Capsule()) // Use Capsule shape
-        }
-        .cardStyle()
-        .padding(.bottom, 8) // Add space between cards in the list
-    }
-}
-
-// Helper function to assign colors based on classification (customize as needed)
-func classificationColor(_ classification: String) -> Color {
-    switch classification.lowercased() {
-    case "normal": return .green
-    case "elevated": return .yellow.opacity(0.9) // Slightly less transparent yellow
-    case "hypertension stage 1": return .orange.opacity(0.9)
-    case "hypertension stage 2": return .red.opacity(0.85) // Soften red
-    case "hypertensive crisis": return .purple
-    default: return .gray
-    }
-}
+// Remove ReadingRow and classificationColor from here, they will move to HistoryTabView
+/*
+struct ReadingRow: View { ... }
+func classificationColor(_ classification: String) -> Color { ... }
+*/
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
