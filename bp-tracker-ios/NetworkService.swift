@@ -3,7 +3,7 @@ import Foundation
 // Actor to handle network requests safely in concurrent environments
 actor NetworkService {
     // Replace with your actual API Gateway Invoke URL
-    private let baseURL = "https://your-api-gateway-id.execute-api.your-region.amazonaws.com"
+    private let baseURL = "https://8unr4sj303.execute-api.us-west-2.amazonaws.com"
 
     private let session: URLSession
     private let decoder: JSONDecoder
@@ -25,10 +25,13 @@ actor NetworkService {
         // Configure JSON Decoder
         self.decoder = JSONDecoder()
         self.decoder.dateDecodingStrategy = .iso8601withFractionalSeconds // Use our custom strategy
+        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
 
         // Configure JSON Encoder
         self.encoder = JSONEncoder()
         // Use default encoding strategies for now
+        // If submitting data required snake_case, we'd set it here too:
+        // self.encoder.keyEncodingStrategy = .convertToSnakeCase
     }
 
     // MARK: - API Calls
@@ -44,7 +47,7 @@ actor NetworkService {
         // Add any necessary headers here, e.g., authorization if needed later
         // request.setValue("Bearer YOUR_TOKEN", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await performRequest(request)
+        let (data, _) = try await performRequest(request)
 
         do {
             let readings = try decoder.decode([Reading].self, from: data)
@@ -86,6 +89,29 @@ actor NetworkService {
              throw NetworkError.decodingError(error)
          }
          */
+    }
+
+    /// Fetches the statistics summary from the backend.
+    func fetchStats() async throws -> Stats {
+        guard let url = URL(string: "\(baseURL)/api/stats") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        let (data, _) = try await performRequest(request)
+
+        do {
+            let stats = try decoder.decode(Stats.self, from: data)
+            return stats
+        } catch {
+            print("Decoding error details: \(error)") // Log detailed decoding error
+            if let decodingError = error as? DecodingError {
+                 print("Decoding error context: \(decodingError)")
+            }
+            throw NetworkError.decodingError(error)
+        }
     }
 
     // MARK: - Private Helper

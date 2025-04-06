@@ -11,156 +11,237 @@ import SwiftUI
 @MainActor // Ensure UI updates happen on the main thread
 class ReadingViewModel: ObservableObject {
     @Published var readings: [Reading] = []
-    @Published var isLoading = false
+    @Published var stats: Stats? = nil // Add stats property
+    @Published var isLoadingReadings = false // Separate loading states
+    @Published var isLoadingStats = false
+    @Published var isSubmitting = false
     @Published var errorMessage: String? = nil
 
-    // Input fields for new readings
-    @Published var systolic1: String = ""
-    @Published var diastolic1: String = ""
-    @Published var pulse1: String = ""
-    @Published var systolic2: String = ""
-    @Published var diastolic2: String = ""
-    @Published var pulse2: String = ""
-    @Published var systolic3: String = ""
-    @Published var diastolic3: String = ""
-    @Published var pulse3: String = ""
+    // Remove input fields, they will live in AddReadingView's @State
+    // @Published var systolic1: String = ""
+    // ... remove other input fields ...
 
     private let networkService = NetworkService()
 
-    func fetchReadings() async {
-        isLoading = true
+    // Combined fetch function
+    func fetchAllData() async {
+        // Run fetches concurrently
+        isLoadingReadings = true
+        isLoadingStats = true
         errorMessage = nil
+
+        async let readingsTask = networkService.fetchReadings()
+        async let statsTask = networkService.fetchStats()
+
         do {
-            readings = try await networkService.fetchReadings()
+            let fetchedReadings = try await readingsTask
+            let fetchedStats = try await statsTask
+
+            // Update published properties on the main actor
+            self.readings = fetchedReadings
+            self.stats = fetchedStats
+
         } catch {
             if let networkError = error as? NetworkService.NetworkError {
-                errorMessage = "Failed to fetch readings: \(networkError)" // Provide more specific error later
+                errorMessage = "Failed to fetch data: \(networkError)" // Generic error for combined fetch
             } else {
                 errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
             }
             print(errorMessage ?? "Unknown error") // Log error
+            // Optionally clear data on error?
+            // self.readings = []
+            // self.stats = nil
         }
-        isLoading = false
+
+        isLoadingReadings = false
+        isLoadingStats = false
     }
 
-    func submitReading() async {
-        // Basic validation and conversion (improve later)
-        guard let s1 = Int(systolic1), let d1 = Int(diastolic1), let p1 = Int(pulse1),
-              let s2 = Int(systolic2), let d2 = Int(diastolic2), let p2 = Int(pulse2),
-              let s3 = Int(systolic3), let d3 = Int(diastolic3), let p3 = Int(pulse3) else {
-            errorMessage = "Please enter valid numbers for all fields."
-            return
-        }
-
-        let input = ReadingInput(systolic1: s1, diastolic1: d1, pulse1: p1,
-                                 systolic2: s2, diastolic2: d2, pulse2: p2,
-                                 systolic3: s3, diastolic3: d3, pulse3: p3)
-
-        isLoading = true
+    // Keep separate fetch functions if needed for specific refresh actions
+    func fetchReadingsOnly() async {
+        isLoadingReadings = true
         errorMessage = nil
         do {
-            try await networkService.submitReading(input: input)
-            // Clear fields after successful submission
-            clearInputFields()
-            // Refresh the list to show the new reading (or rely on backend response if it included the new item)
-            await fetchReadings()
+            readings = try await networkService.fetchReadings()
         } catch {
              if let networkError = error as? NetworkService.NetworkError {
-                errorMessage = "Failed to submit reading: \(networkError)" // Provide more specific error later
-            } else {
-                errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
-            }
-             print(errorMessage ?? "Unknown error") // Log error
-            isLoading = false // Keep loading false on error
+                 errorMessage = "Failed to refresh readings: \(networkError)"
+             } else {
+                 errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+             }
+            print(errorMessage ?? "Unknown error")
         }
-        // isLoading is set to false in fetchReadings() upon success
+        isLoadingReadings = false
     }
 
-    private func clearInputFields() {
-        systolic1 = ""; diastolic1 = ""; pulse1 = ""
-        systolic2 = ""; diastolic2 = ""; pulse2 = ""
-        systolic3 = ""; diastolic3 = ""; pulse3 = ""
+     func fetchStatsOnly() async {
+        isLoadingStats = true
+        errorMessage = nil
+        do {
+            stats = try await networkService.fetchStats()
+        } catch {
+             if let networkError = error as? NetworkService.NetworkError {
+                 errorMessage = "Failed to refresh stats: \(networkError)"
+             } else {
+                 errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+             }
+            print(errorMessage ?? "Unknown error")
+        }
+        isLoadingStats = false
     }
+
+    // Submit function now takes input from the AddReadingView
+    func submitReading(input: ReadingInput) async throws { // Make it throw so sheet can handle error/dismiss
+        isSubmitting = true
+        errorMessage = nil // Clear previous errors
+        do {
+            try await networkService.submitReading(input: input)
+            // Refresh data after successful submission
+            await fetchAllData()
+            isSubmitting = false
+        } catch {
+             isSubmitting = false // Ensure loading state is reset on error
+             // Re-throw the error so the calling view (AddReadingView via ContentView) knows about it
+            if let networkError = error as? NetworkService.NetworkError {
+                 print("Submit failed: \(networkError)")
+                 errorMessage = "Failed to submit reading: \(networkError)"
+            } else {
+                 print("Submit failed: \(error.localizedDescription)")
+                 errorMessage = "An unexpected error occurred during submission."
+            }
+            throw error // Re-throw the original error
+        }
+    }
+
+    // Remove clearInputFields as state is local to AddReadingView
+    // private func clearInputFields() { ... }
 }
 
 struct ContentView: View {
     @StateObject private var viewModel = ReadingViewModel()
+    @State private var showingAddSheet = false
 
     var body: some View {
         NavigationView {
-            VStack {
-                // MARK: - Add Reading Form
-                // Simplified form directly in ContentView for now
-                Section("Add New Reading") {
-                    VStack {
-                         HStack {
-                            TextField("Systolic 1", text: $viewModel.systolic1).keyboardType(.numberPad)
-                            TextField("Diastolic 1", text: $viewModel.diastolic1).keyboardType(.numberPad)
-                            TextField("Pulse 1", text: $viewModel.pulse1).keyboardType(.numberPad)
-                        }
-                        HStack {
-                            TextField("Systolic 2", text: $viewModel.systolic2).keyboardType(.numberPad)
-                            TextField("Diastolic 2", text: $viewModel.diastolic2).keyboardType(.numberPad)
-                            TextField("Pulse 3", text: $viewModel.pulse2).keyboardType(.numberPad)
-                        }
-                        HStack {
-                            TextField("Systolic 3", text: $viewModel.systolic3).keyboardType(.numberPad)
-                            TextField("Diastolic 3", text: $viewModel.diastolic3).keyboardType(.numberPad)
-                            TextField("Pulse 3", text: $viewModel.pulse3).keyboardType(.numberPad)
-                        }
-                        Button("Submit Reading") {
-                             Task {
-                                 await viewModel.submitReading()
-                             }
-                        }
-                        .disabled(viewModel.isLoading)
-                        .padding(.top)
-                    }
-                    .padding()
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(8)
-                }
-                .padding(.horizontal)
-                .padding(.bottom)
+            // Use ZStack for layering FAB over the content
+            ZStack(alignment: .bottomTrailing) {
+                // Main content ScrollView or List
+                VStack(spacing: 0) { // Remove default VStack spacing
+                    // MARK: - Stats View
+                    StatsView(stats: viewModel.stats)
+                        .padding(.bottom) // Add some space below stats
 
-                // MARK: - Readings List
-                List {
-                    if viewModel.isLoading && viewModel.readings.isEmpty {
-                        ProgressView("Loading readings...")
-                    } else if let errorMessage = viewModel.errorMessage {
-                        Text("Error: \(errorMessage)")
-                            .foregroundColor(.red)
-                    } else if viewModel.readings.isEmpty {
-                        Text("No readings found. Add one above!")
-                    } else {
-                        ForEach(viewModel.readings) { reading in
-                            ReadingRow(reading: reading)
-                        }
-                    }
-                }
-                .navigationTitle("BP Tracker")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        if viewModel.isLoading {
-                            ProgressView()
+                     // MARK: - Loading/Error for Stats
+                     // Consider placing inside StatsView or handling more gracefully
+                     if viewModel.isLoadingStats {
+                         ProgressView("Loading Stats...").padding()
+                     }
+
+                    // MARK: - Readings List Header
+                     HStack {
+                         Text("History")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                         Spacer()
+                         // Optional: Add filtering/sorting controls here later
+                     }
+                     .padding(.horizontal)
+                     .padding(.top)
+                     .padding(.bottom, 5)
+                     .background(Color(UIColor.systemGroupedBackground)) // Subtle background
+
+                    Divider()
+
+                    // MARK: - Readings List
+                    List {
+                        if viewModel.isLoadingReadings && viewModel.readings.isEmpty {
+                            ProgressView("Loading readings...")
+                        } else if let errorMessage = viewModel.errorMessage, viewModel.readings.isEmpty {
+                             // Show general error if list is empty, could refine error display
+                            Text("Error: \(errorMessage)")
+                                .foregroundColor(.red)
+                                .padding()
+                        } else if viewModel.readings.isEmpty {
+                            Text("No readings recorded yet.")
+                                .foregroundColor(.secondary)
+                                .padding()
                         } else {
-                            Button {
-                                Task {
-                                    await viewModel.fetchReadings()
-                                }
-                            } label: {
-                                Image(systemName: "arrow.clockwise")
+                            ForEach(viewModel.readings) { reading in
+                                ReadingRow(reading: reading)
+                                    // Apply list row styling if needed
+                                    .listRowInsets(EdgeInsets()) // Remove default padding if using cards in ReadingRow
+                                    .padding(.vertical, 4)
+                                    .padding(.horizontal)
                             }
                         }
                     }
+                    .listStyle(.plain) // Use plain style for less visual clutter
+                    .refreshable { // Add pull-to-refresh
+                        await viewModel.fetchAllData()
+                    }
+                    // Add bottom padding to prevent FAB overlap
+                    .padding(.bottom, 60)
+
+                } // End Main VStack
+
+                // MARK: - Floating Action Button (FAB)
+                 Button {
+                     showingAddSheet = true
+                 } label: {
+                     HStack {
+                         Image(systemName: "plus")
+                         Text("Add Reading")
+                     }
+                     .padding()
+                     .foregroundColor(.white)
+                     .background(Color.blue) // Or your app's accent color
+                     .clipShape(Capsule())
+                     .shadow(radius: 5)
+                     .padding() // Padding from the edge of the screen
+                 }
+
+            } // End ZStack
+            .navigationTitle("Blood Pressure Tracker") // Change title back to full name
+            .toolbar {
+                 // Remove the old toolbar item
+                 /*
+                 ToolbarItem(placement: .navigationBarTrailing) {
+                      Button {
+                          showingAddSheet = true
+                      } label: {
+                          Image(systemName: "plus.circle.fill")
+                              .font(.title2) // Make icon slightly larger
+                      }
+                 }
+                 */
+            }
+            // Use .task for initial data load
+            .task {
+                if viewModel.readings.isEmpty && viewModel.stats == nil {
+                   await viewModel.fetchAllData()
                 }
             }
-            .task { // Use .task for async work tied to the view lifecycle
-                if viewModel.readings.isEmpty { // Fetch only if list is empty initially
-                   await viewModel.fetchReadings()
+            // Sheet for adding new readings
+            .sheet(isPresented: $showingAddSheet) {
+                AddReadingView() { newInput in
+                    // This closure is called by AddReadingView on successful save
+                    Task {
+                         do {
+                             try await viewModel.submitReading(input: newInput)
+                             // If submitReading is successful, dismiss the sheet
+                             showingAddSheet = false
+                         } catch {
+                            // Error is handled and published by ViewModel
+                            // Sheet remains open for user to see/correct
+                            print("Submission failed, sheet stays open.")
+                         }
+                    }
                 }
+                 // Inject environment object if ViewModel needed deeper
+                 // .environmentObject(viewModel)
             }
         }
+        .navigationViewStyle(.stack) // Use stack style for standard behavior
     }
 }
 
@@ -180,32 +261,37 @@ struct ReadingRow: View {
             VStack(alignment: .leading) {
                 Text("\(reading.systolic) / \(reading.diastolic)")
                     .font(.headline)
-                Text("Pulse: \(reading.pulse)")
-                    .font(.subheadline)
                  Text(reading.timestamp, formatter: Self.dateFormatter)
-                    .font(.caption)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary) // Use secondary color for timestamp
+                Text("Pulse: \(reading.pulse) bpm")
+                    .font(.callout) // Slightly smaller font for pulse
                     .foregroundColor(.gray)
             }
             Spacer()
-            Text(reading.classification)
-                .font(.subheadline)
-                .padding(5)
-                .background(classificationColor(reading.classification))
+            // Classification Badge
+             Text(reading.classification)
+                .font(.caption).bold()
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(classificationColor(reading.classification)) // Use updated helper
                 .foregroundColor(.white)
-                .cornerRadius(5)
+                .clipShape(Capsule()) // Use Capsule shape
         }
+        .cardStyle()
+        .padding(.bottom, 8) // Add space between cards in the list
     }
+}
 
-    // Helper to assign colors based on classification (customize as needed)
-    private func classificationColor(_ classification: String) -> Color {
-        switch classification.lowercased() {
-        case "normal": return .green
-        case "elevated": return .yellow.opacity(0.8)
-        case "hypertension stage 1": return .orange
-        case "hypertension stage 2": return .red
-        case "hypertensive crisis": return .purple
-        default: return .gray
-        }
+// Helper function to assign colors based on classification (customize as needed)
+func classificationColor(_ classification: String) -> Color {
+    switch classification.lowercased() {
+    case "normal": return .green
+    case "elevated": return .yellow.opacity(0.9) // Slightly less transparent yellow
+    case "hypertension stage 1": return .orange.opacity(0.9)
+    case "hypertension stage 2": return .red.opacity(0.85) // Soften red
+    case "hypertensive crisis": return .purple
+    default: return .gray
     }
 }
 

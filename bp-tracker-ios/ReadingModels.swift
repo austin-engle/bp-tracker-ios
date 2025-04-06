@@ -33,6 +33,25 @@ struct ReadingInput: Codable {
     // let timestamp: String?
 }
 
+// Represents the statistical data returned by the API (matches Go models.Stats)
+struct Stats: Codable {
+    // Using optional Reading? because the backend might return null if no readings exist for a period
+    let lastReading: Reading?
+    let sevenDayAvg: Reading?
+    let sevenDayCount: Int
+    let thirtyDayAvg: Reading?
+    let thirtyDayCount: Int
+    let allTimeAvg: Reading?
+    let allTimeCount: Int
+
+    // Provide default values or handle potential nil averages in the View/ViewModel
+    // Example for providing default:
+    static let empty = Stats(lastReading: nil,
+                           sevenDayAvg: nil, sevenDayCount: 0,
+                           thirtyDayAvg: nil, thirtyDayCount: 0,
+                           allTimeAvg: nil, allTimeCount: 0)
+}
+
 // Helper for handling the date format from the API
 // We need to tell the JSONDecoder to use this strategy
 extension JSONDecoder.DateDecodingStrategy {
