@@ -114,6 +114,19 @@ actor NetworkService {
         }
     }
 
+    /// Deletes a specific reading by its ID.
+    func deleteReading(id: Int64) async throws {
+        guard let url = URL(string: "\(baseURL)/api/readings/\(id)") else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+
+        // Perform request, response body might contain success message but we ignore it for now
+        _ = try await performRequest(request)
+    }
+
     // MARK: - Private Helper
 
     /// Performs the URLSession data task and handles basic response validation.

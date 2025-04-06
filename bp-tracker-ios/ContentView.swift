@@ -113,6 +113,34 @@ class ReadingViewModel: ObservableObject {
         }
     }
 
+    /// Deletes a reading locally and via the network service.
+    func deleteReading(at offsets: IndexSet) {
+        // Get the readings to delete from the current array based on offsets
+        let readingsToDelete = offsets.map { readings[$0] }
+
+        // Remove from local array immediately for UI responsiveness
+        readings.remove(atOffsets: offsets)
+
+        // Call network service for each reading to delete
+        Task {
+            for reading in readingsToDelete {
+                do {
+                    try await networkService.deleteReading(id: reading.id)
+                    // Optionally refresh stats after successful delete
+                    // await fetchStatsOnly()
+                } catch {
+                    // Handle error - e.g., show alert, add reading back to list?
+                    errorMessage = "Failed to delete reading (ID: \(reading.id)): \(error.localizedDescription)"
+                    print(errorMessage ?? "Unknown delete error")
+                    // Consider adding the reading back if network delete failed
+                    // This requires careful state management to avoid duplicates/ordering issues.
+                    // For simplicity now, we just log the error.
+                    // await fetchAllData() // Or just refresh all data
+                }
+            }
+        }
+    }
+
     // Remove clearInputFields as state is local to AddReadingView
     // private func clearInputFields() { ... }
 }

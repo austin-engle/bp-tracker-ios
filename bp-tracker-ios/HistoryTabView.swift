@@ -24,6 +24,7 @@ struct HistoryTabView: View {
                         .padding(.vertical, 4)
                         .padding(.horizontal)
                 }
+                .onDelete(perform: viewModel.deleteReading) // Add swipe-to-delete
             }
         }
         .listStyle(.plain)
