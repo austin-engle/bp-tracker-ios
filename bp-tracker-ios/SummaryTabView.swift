@@ -2,6 +2,24 @@ import SwiftUI
 
 struct SummaryTabView: View {
     @EnvironmentObject var viewModel: ReadingViewModel // Access the shared ViewModel
+    @State private var selectedAveragePeriod: StatsView.AveragePeriod = .sevenDay // Own the state here
+
+    // Computed property to filter readings based on selected period
+    private var filteredReadings: [Reading] {
+        let now = Date()
+        let calendar = Calendar.current
+
+        switch selectedAveragePeriod {
+        case .sevenDay:
+            guard let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now) else { return viewModel.readings } // Should handle error better
+            return viewModel.readings.filter { $0.timestamp >= sevenDaysAgo && $0.timestamp <= now }
+        case .thirtyDay:
+             guard let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: now) else { return viewModel.readings }
+            return viewModel.readings.filter { $0.timestamp >= thirtyDaysAgo && $0.timestamp <= now }
+        case .allTime:
+            return viewModel.readings // Return all readings
+        }
+    }
 
     var body: some View {
         // Use a ScrollView or just a VStack depending on content complexity
@@ -36,15 +54,19 @@ struct SummaryTabView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 } else { // Loaded state (or loading update)
-                    // Display the StatsView normally
-                    StatsView(stats: viewModel.stats)
-                        // Optionally show subtle progress if just updating
-                        if viewModel.isLoadingStats {
-                            ProgressView()
-                                .controlSize(.small)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.top, 5)
-                        }
+                    // Display the StatsView normally, passing the binding
+                    StatsView(stats: viewModel.stats, selectedAveragePeriod: $selectedAveragePeriod)
+
+                    // --- Add the Chart View Here ---
+                    BPChartView(readings: filteredReadings) // Pass filtered readings from ViewModel
+
+                    // Optionally show subtle progress if just updating
+                    if viewModel.isLoadingReadings || viewModel.isLoadingStats { // Show if either is loading
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 5)
+                    }
                 }
 
                 // Add other summary elements here later if needed

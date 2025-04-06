@@ -1,11 +1,14 @@
 import SwiftUI
+import Charts // Keep Charts import if classificationColor uses it indirectly?
 
 struct StatsView: View {
     let stats: Stats? // Receive stats from ContentView
+    @Binding var selectedAveragePeriod: AveragePeriod // Use Binding here
 
-    // State for the selected average tab
-    @State private var selectedAveragePeriod: AveragePeriod = .sevenDay
+    // Remove @State definition for selectedAveragePeriod
+    // @State private var selectedAveragePeriod: AveragePeriod = .sevenDay
 
+    // Keep enum definition here or move to a shared location
     enum AveragePeriod: String, CaseIterable, Identifiable {
         case sevenDay = "7 Day Avg"
         case thirtyDay = "30 Day Avg"
@@ -151,9 +154,20 @@ struct StatsView: View {
 
 // Preview Provider (Optional)
 struct StatsView_Previews: PreviewProvider {
-    static var previews: some View {
-        // Example with some data
-        let previewStats = Stats(
+    // Need a @State wrapper for the preview Binding
+    struct PreviewWrapper: View {
+        @State var selection: StatsView.AveragePeriod = .sevenDay
+        var stats: Stats?
+        var body: some View {
+            StatsView(stats: stats, selectedAveragePeriod: $selection)
+        }
+    }
+
+    // Helper static property for a loaded view model's stats
+    static var loadedStatsData: Stats? { // Return optional Stats
+        // Create view model just to populate data structure
+        let viewModel = ReadingViewModel()
+        viewModel.stats = Stats(
             lastReading: Reading(id: 1, timestamp: Date().addingTimeInterval(-3600), systolic: 118, diastolic: 75, pulse: 65, classification: "Normal"),
             sevenDayAvg: Reading(id: 0, timestamp: Date(), systolic: 122, diastolic: 81, pulse: 68, classification: "Elevated"),
             sevenDayCount: 15,
@@ -162,16 +176,22 @@ struct StatsView_Previews: PreviewProvider {
             allTimeAvg: Reading(id: 0, timestamp: Date(), systolic: 124, diastolic: 82, pulse: 69, classification: "Elevated"),
             allTimeCount: 150
         )
+        return viewModel.stats
+    }
 
-        // Example with no data (after initial load)
-         let emptyStats = Stats.empty
+    static var previews: some View {
+        // Return the PreviewWrapper using the helper property for data
+         PreviewWrapper(stats: loadedStatsData)
+             .padding()
+             .previewLayout(.sizeThatFits)
+             .previewDisplayName("Loaded State")
 
-        VStack {
-            StatsView(stats: previewStats)
-            StatsView(stats: emptyStats)
-            StatsView(stats: nil) // Simulates loading state
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
+         // We can add back other states later if needed, using similar pattern or nil
+         /*
+         PreviewWrapper(stats: nil)
+             .padding()
+             .previewLayout(.sizeThatFits)
+             .previewDisplayName("Nil State (Loading)")
+         */
     }
 }
