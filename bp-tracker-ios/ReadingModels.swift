@@ -27,10 +27,6 @@ struct ReadingInput: Codable {
     let diastolic3: Int
     let pulse3: Int
 
-    // Although timestamp is optional in Go, we might handle its optionality
-    // during the creation of this struct in the UI layer rather than here.
-    // If we need to explicitly send nil sometimes, we'd make it optional:
-    // let timestamp: String?
 }
 
 // Represents the statistical data returned by the API (matches Go models.Stats)

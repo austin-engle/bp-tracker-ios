@@ -72,20 +72,6 @@ struct ReadingRow: View {
     }
 }
 
-// MARK: - Classification Color Helper (Moved Here)
-/* // Commenting out the moved function
-func classificationColor(_ classification: String) -> Color {
-    switch classification.lowercased() {
-    case "normal": return .green
-    case "elevated": return .yellow.opacity(0.9)
-    case "hypertension stage 1": return .orange.opacity(0.9)
-    case "hypertension stage 2": return .red.opacity(0.85)
-    case "hypertensive crisis": return .purple
-    default: return .gray
-    }
-}
-*/
-
 // MARK: - Preview Provider
 struct HistoryTabView_Previews: PreviewProvider {
 

@@ -60,20 +60,8 @@ struct SummaryTabView: View {
                     // --- Add the Chart View Here ---
                     BPChartView(readings: filteredReadings) // Pass filtered readings from ViewModel
 
-                    // Optionally show subtle progress if just updating
-                    // if viewModel.isLoadingReadings || viewModel.isLoadingStats { // Temporarily disabled refresh indicator
-                    //     ProgressView()
-                    //         .controlSize(.small)
-                    //         .frame(maxWidth: .infinity, alignment: .center)
-                    //         .padding(.top, 5)
-                    // }
                 }
 
-                // Add other summary elements here later if needed
-                // e.g., Insights, Charts, etc.
-
-                // Removed Spacer to allow content to determine height
-                // Spacer()
             }
             .padding(.top) // Add some padding at the top of the scroll view content
         }

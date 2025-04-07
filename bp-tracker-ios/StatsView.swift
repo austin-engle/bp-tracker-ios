@@ -183,12 +183,5 @@ struct StatsView_Previews: PreviewProvider {
              .previewLayout(.sizeThatFits)
              .previewDisplayName("Loaded State")
 
-         // We can add back other states later if needed, using similar pattern or nil
-         /*
-         PreviewWrapper(stats: nil)
-             .padding()
-             .previewLayout(.sizeThatFits)
-             .previewDisplayName("Nil State (Loading)")
-         */
     }
 }

@@ -29,9 +29,6 @@ actor NetworkService {
 
         // Configure JSON Encoder
         self.encoder = JSONEncoder()
-        // Use default encoding strategies for now
-        // If submitting data required snake_case, we'd set it here too:
-        // self.encoder.keyEncodingStrategy = .convertToSnakeCase
     }
 
     // MARK: - API Calls
@@ -78,17 +75,6 @@ actor NetworkService {
         // Perform request and ignore the response body for now
         _ = try await performRequest(request)
 
-        // If we needed the response:
-        /*
-         let (data, response) = try await performRequest(request)
-         do {
-             // Define a struct matching the submit response if needed
-             let submitResponse = try decoder.decode(SubmitResponse.self, from: data)
-             print("Submit successful: \(submitResponse)")
-         } catch {
-             throw NetworkError.decodingError(error)
-         }
-         */
     }
 
     /// Fetches the statistics summary from the backend.

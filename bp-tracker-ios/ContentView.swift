@@ -48,9 +48,6 @@ class ReadingViewModel: ObservableObject {
                 errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
             }
             print(errorMessage ?? "Unknown error") // Log error
-            // Optionally clear data on error?
-            // self.readings = []
-            // self.stats = nil
         }
 
         isLoadingReadings = false
@@ -80,11 +77,7 @@ class ReadingViewModel: ObservableObject {
              // Assign directly - this seemed okay before
              stats = try await networkService.fetchStats()
          } catch {
-             // --- Revert to state that avoided -999 error ---
-             // Comment out the errorMessage update, just print.
              print("Error during fetchStatsOnly: \(error.localizedDescription)")
-             // errorMessage = "..." // Keep commented out for now
-             // --- End Revert ---
          }
      }
 
@@ -130,17 +123,10 @@ class ReadingViewModel: ObservableObject {
                     // Handle error - e.g., show alert, add reading back to list?
                     errorMessage = "Failed to delete reading (ID: \(reading.id)): \(error.localizedDescription)"
                     print(errorMessage ?? "Unknown delete error")
-                    // Consider adding the reading back if network delete failed
-                    // This requires careful state management to avoid duplicates/ordering issues.
-                    // For simplicity now, we just log the error.
-                    // await fetchAllData() // Or just refresh all data
                 }
             }
         }
     }
-
-    // Remove clearInputFields as state is local to AddReadingView
-    // private func clearInputFields() { ... }
 }
 
 // MARK: - Classification Color Helper (Global Scope for now)
@@ -229,12 +215,6 @@ struct ContentView: View {
         // Use .task for initial data load (might need adjustment based on tab appearance)
     }
 }
-
-// Remove ReadingRow and classificationColor from here, they will move to HistoryTabView
-/*
-struct ReadingRow: View { ... }
-func classificationColor(_ classification: String) -> Color { ... }
-*/
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
